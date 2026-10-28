@@ -156,7 +156,7 @@ class Registrar
     }
 
     /**
-     * @return array<string, array<int, string>|string>
+     * @return array<string, array<int, string>|string|true>
      */
     protected static function authorizationServerMetadata(string $oauthPrefix): array
     {
@@ -170,7 +170,22 @@ class Registrar
             'scopes_supported' => [self::OAUTH_SCOPE],
             'grant_types_supported' => ['authorization_code', 'refresh_token'],
             'token_endpoint_auth_methods_supported' => ['none', 'client_secret_basic', 'client_secret_post'],
+            'client_id_metadata_document_supported' => static::supportsClientMetadataDocuments() ? true : null,
         ], fn (mixed $value): bool => $value !== null);
+    }
+
+    /**
+     * Determine if Passport accepts Client ID Metadata Documents as client identifiers.
+     */
+    protected static function supportsClientMetadataDocuments(): bool
+    {
+        if (class_exists(Passport::class) === false) {
+            return false;
+        }
+
+        $callback = [Passport::class, 'clientMetadataDocumentsEnabled'];
+
+        return is_callable($callback) && $callback() === true;
     }
 
     /**

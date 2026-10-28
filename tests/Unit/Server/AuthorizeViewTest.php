@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-function renderAuthorize(Request $request, array $client = []): string
+function renderAuthorize(Request $request, array $client = [], ?object $clientMetadata = null): string
 {
     Route::delete('/oauth/authorize', fn (): null => null)->name('passport.authorizations.deny');
     Route::post('/oauth/authorize', fn (): null => null)->name('passport.authorizations.approve');
@@ -16,6 +16,7 @@ function renderAuthorize(Request $request, array $client = []): string
         'scopes' => [],
         'authToken' => 'token',
         'request' => $request,
+        ...($clientMetadata === null ? [] : ['clientMetadata' => $clientMetadata]),
     ])->render();
 }
 
@@ -43,4 +44,85 @@ it('escapes the redirect uri', function (): void {
     $html = renderAuthorize(Request::create('/oauth/authorize', 'GET', ['redirect_uri' => 'https://x.test/<script>alert(1)</script>']));
 
     expect($html)->not->toContain('<script>alert(1)</script>');
+});
+
+function clientMetadata(array $overrides = []): object
+{
+    return (object) [
+        'url' => 'https://app.example.com/client.json',
+        'host' => 'app.example.com',
+        'name' => 'Example',
+        'clientUri' => 'https://app.example.com',
+        'clientUriMatchesOrigin' => true,
+        'logoUri' => 'https://app.example.com/logo.png',
+        'redirectIsLoopback' => false,
+        'allRedirectsAreLoopback' => false,
+        ...$overrides,
+    ];
+}
+
+it('shows the host that publishes a client metadata document', function (): void {
+    $this->withoutVite();
+
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata(['host' => 'claude.example']));
+
+    expect($html)->toContain('Authorize Example')
+        ->and($html)->toContain('Published at claude.example')
+        ->and($html)->not->toContain('which is not where it is published')
+        ->and($html)->not->toContain('program running on this computer');
+});
+
+it('never draws the logo of a client metadata document', function (): void {
+    $this->withoutVite();
+
+    $html = renderAuthorize(
+        Request::create('/oauth/authorize'),
+        ['logo_uri' => 'https://app.example.com/registered.png'],
+        clientMetadata(['logoUri' => 'https://app.example.com/logo.png']),
+    );
+
+    expect($html)->not->toContain('<img')
+        ->and($html)->not->toContain('logo.png')
+        ->and($html)->not->toContain('registered.png');
+});
+
+it('warns when the website of a client metadata document is on another origin', function (): void {
+    $this->withoutVite();
+
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata([
+        'clientUri' => 'https://other.example',
+        'clientUriMatchesOrigin' => false,
+    ]));
+
+    expect($html)->toContain('which is not where it is published')
+        ->and($html)->toContain('https://other.example');
+});
+
+it('escapes the website of a client metadata document', function (): void {
+    $this->withoutVite();
+
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata([
+        'clientUri' => 'https://x.test/<script>alert(1)</script>',
+        'clientUriMatchesOrigin' => false,
+    ]));
+
+    expect($html)->not->toContain('<script>alert(1)</script>');
+});
+
+it('warns when approval sends the person to a program on this computer', function (): void {
+    $this->withoutVite();
+
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata(['redirectIsLoopback' => true]));
+
+    expect($html)->toContain('program running on this computer');
+});
+
+it('still draws the logo of a registered client', function (): void {
+    $this->withoutVite();
+
+    $html = renderAuthorize(Request::create('/oauth/authorize'), ['logo_uri' => 'https://app.example.com/registered.png']);
+
+    expect($html)->toContain('<img src="https://app.example.com/registered.png"')
+        ->and($html)->not->toContain('Published at')
+        ->and($html)->not->toContain('program running on this computer');
 });

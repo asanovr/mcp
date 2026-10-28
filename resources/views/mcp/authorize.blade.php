@@ -51,7 +51,7 @@
             <!-- Header -->
             <div class="flex flex-col space-y-1.5 p-6">
                 <div class="flex items-center justify-center mb-4">
-                    @if ($client->logo_uri ?? null)
+                    @if (! ($clientMetadata ?? null) && ($client->logo_uri ?? null))
                     <img src="{{ $client->logo_uri }}" alt="{{ $client->name }}" class="h-12 w-12 rounded object-contain">
                     @else
                     <!-- Shield Icon -->
@@ -65,6 +65,12 @@
                     Authorize {{ $client->name }}
                 </h3>
 
+                @if ($clientMetadata ?? null)
+                <p class="text-sm text-muted-foreground text-center break-all">
+                    Published at {{ $clientMetadata->host }}
+                </p>
+                @endif
+
                 <p class="text-sm text-muted-foreground text-center">
                     This application will be able to:<br/>Use available MCP functionality.
                 </p>
@@ -73,6 +79,18 @@
                 @if ($redirectUri)
                 <p class="text-xs text-muted-foreground text-center break-all">
                     You will be redirected to {{ $redirectUri }}
+                </p>
+                @endif
+
+                @if (($clientMetadata ?? null) && $clientMetadata->clientUri && ! $clientMetadata->clientUriMatchesOrigin)
+                <p class="text-sm font-medium text-destructive text-center break-all">
+                    Warning: this application says its website is {{ $clientMetadata->clientUri }}, which is not where it is published ({{ $clientMetadata->host }}).
+                </p>
+                @endif
+
+                @if (($clientMetadata ?? null) && $clientMetadata->redirectIsLoopback)
+                <p class="text-sm font-medium text-destructive text-center">
+                    Warning: approving will send you to a program running on this computer. Only continue if you started it.
                 </p>
                 @endif
 

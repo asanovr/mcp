@@ -31,6 +31,7 @@ function ensureMockClientRepository(): void
 afterEach(function (): void {
     if (class_exists(Passport::class)) {
         Passport::useClientModel(Client::class);
+        Passport::$clientMetadataDocuments = false;
     }
 });
 
@@ -946,6 +947,58 @@ it('handles oauth discovery with multi-segment paths', function (): void {
         'grant_types_supported' => ['authorization_code', 'refresh_token'],
         'token_endpoint_auth_methods_supported' => ['none', 'client_secret_basic', 'client_secret_post'],
     ]);
+});
+
+it('advertises client id metadata documents when passport accepts them', function (): void {
+    ensureMockClientRepository();
+
+    Route::get('/oauth/authorize')->name('passport.authorizations.authorize');
+    Route::post('/oauth/token')->name('passport.token');
+
+    (new Registrar)->oauthRoutes();
+
+    Passport::$clientMetadataDocuments = true;
+
+    $this->getJson('/.well-known/oauth-authorization-server')
+        ->assertOk()
+        ->assertJsonPath('client_id_metadata_document_supported', true);
+});
+
+it('does not advertise client id metadata documents when passport does not accept them', function (): void {
+    ensureMockClientRepository();
+
+    Route::get('/oauth/authorize')->name('passport.authorizations.authorize');
+    Route::post('/oauth/token')->name('passport.token');
+
+    (new Registrar)->oauthRoutes();
+
+    Passport::$clientMetadataDocuments = false;
+
+    $this->getJson('/.well-known/oauth-authorization-server/mcp/weather')
+        ->assertOk()
+        ->assertJsonMissingPath('client_id_metadata_document_supported');
+});
+
+it('follows passport when client id metadata documents are switched between requests', function (): void {
+    ensureMockClientRepository();
+
+    Route::get('/oauth/authorize')->name('passport.authorizations.authorize');
+    Route::post('/oauth/token')->name('passport.token');
+
+    (new Registrar)->oauthRoutes();
+
+    $this->getJson('/.well-known/oauth-authorization-server')
+        ->assertJsonMissingPath('client_id_metadata_document_supported');
+
+    Passport::$clientMetadataDocuments = true;
+
+    $this->getJson('/.well-known/oauth-authorization-server')
+        ->assertJsonPath('client_id_metadata_document_supported', true);
+
+    Passport::$clientMetadataDocuments = false;
+
+    $this->getJson('/.well-known/oauth-authorization-server')
+        ->assertJsonMissingPath('client_id_metadata_document_supported');
 });
 
 it('handles oauth discovery with single segment paths', function (): void {

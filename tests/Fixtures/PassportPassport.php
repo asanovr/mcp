@@ -10,9 +10,16 @@ class Passport
 
     public static $clientModel = Client::class;
 
+    public static $clientMetadataDocuments = false;
+
     public static function tokensCan($scopes): void
     {
         self::$scopes = $scopes;
+    }
+
+    public static function clientMetadataDocumentsEnabled(): bool
+    {
+        return static::$clientMetadataDocuments;
     }
 
     public static function useClientModel(string $clientModel): void
