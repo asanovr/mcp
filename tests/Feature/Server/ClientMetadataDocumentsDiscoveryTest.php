@@ -9,7 +9,8 @@ use Symfony\Component\Process\Process;
 
 /*
  * The Passport stand-ins are loaded once per process, and Pest cannot isolate a test, so each
- * case runs this same test again in a child process, where it finds the Passport it needs.
+ * case runs this same test again in a child process, where it finds the Passport it needs. The
+ * child runs with Xdebug off: a coverage run has loaded it in the parent, and the child needs none.
  */
 function inChildProcess(string $name): bool
 {
@@ -20,7 +21,7 @@ function inChildProcess(string $name): bool
     $process = new Process(
         [PHP_BINARY, dirname(__DIR__, 3).'/vendor/bin/pest', '--no-coverage', '--filter', $name, __FILE__],
         dirname(__DIR__, 3),
-        ['MCP_CHILD_PROCESS' => $name],
+        ['MCP_CHILD_PROCESS' => $name, 'XDEBUG_MODE' => 'off'],
     );
 
     $process->run();
