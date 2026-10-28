@@ -44,6 +44,7 @@
     @vite(['resources/css/app.css'])
 </head>
 <body class="font-sans antialiased bg-background text-foreground">
+@php($clientMetadata ??= null)
 <div class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
         <!-- Card Container -->
@@ -51,7 +52,7 @@
             <!-- Header -->
             <div class="flex flex-col space-y-1.5 p-6">
                 <div class="flex items-center justify-center mb-4">
-                    @if (! ($clientMetadata ?? null) && ($client->logo_uri ?? null))
+                    @if (! $clientMetadata && ($client->logo_uri ?? null))
                     <img src="{{ $client->logo_uri }}" alt="{{ $client->name }}" class="h-12 w-12 rounded object-contain">
                     @else
                     <!-- Shield Icon -->
@@ -65,7 +66,7 @@
                     Authorize {{ $client->name }}
                 </h3>
 
-                @if ($clientMetadata ?? null)
+                @if ($clientMetadata)
                 <p class="text-sm text-muted-foreground text-center break-all">
                     Published at {{ $clientMetadata->host }}
                 </p>
@@ -82,13 +83,13 @@
                 </p>
                 @endif
 
-                @if (($clientMetadata ?? null) && $clientMetadata->clientUri && ! $clientMetadata->clientUriMatchesOrigin)
+                @if ($clientMetadata && $clientMetadata->clientUri && ! $clientMetadata->clientUriMatchesOrigin)
                 <p class="text-sm font-medium text-destructive text-center break-all">
                     Warning: this application says its website is {{ $clientMetadata->clientUri }}, which is not where it is published ({{ $clientMetadata->host }}).
                 </p>
                 @endif
 
-                @if (($clientMetadata ?? null) && $clientMetadata->redirectIsLoopback)
+                @if ($clientMetadata && $clientMetadata->redirectIsLoopback)
                 <p class="text-sm font-medium text-destructive text-center">
                     Warning: approving will send you to a program running on this computer. Only continue if you started it.
                 </p>
