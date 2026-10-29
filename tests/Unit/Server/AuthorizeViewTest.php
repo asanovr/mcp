@@ -20,6 +20,21 @@ function renderAuthorize(Request $request, array $client = [], ?object $clientMe
     ])->render();
 }
 
+function documentClientMetadata(array $overrides = []): object
+{
+    return (object) [
+        'url' => 'https://app.example.com/client.json',
+        'host' => 'app.example.com',
+        'name' => 'Example',
+        'clientUri' => 'https://app.example.com',
+        'clientUriMatchesOrigin' => true,
+        'logoUri' => 'https://app.example.com/logo.png',
+        'redirectIsLoopback' => false,
+        'allRedirectsAreLoopback' => false,
+        ...$overrides,
+    ];
+}
+
 it('shows the requested redirect uri', function (): void {
     $this->withoutVite();
 
@@ -46,25 +61,10 @@ it('escapes the redirect uri', function (): void {
     expect($html)->not->toContain('<script>alert(1)</script>');
 });
 
-function clientMetadata(array $overrides = []): object
-{
-    return (object) [
-        'url' => 'https://app.example.com/client.json',
-        'host' => 'app.example.com',
-        'name' => 'Example',
-        'clientUri' => 'https://app.example.com',
-        'clientUriMatchesOrigin' => true,
-        'logoUri' => 'https://app.example.com/logo.png',
-        'redirectIsLoopback' => false,
-        'allRedirectsAreLoopback' => false,
-        ...$overrides,
-    ];
-}
-
 it('shows the host that publishes a client metadata document', function (): void {
     $this->withoutVite();
 
-    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata(['host' => 'claude.example']));
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: documentClientMetadata(['host' => 'claude.example']));
 
     expect($html)->toContain('Authorize Example')
         ->and($html)->toContain('Published at claude.example')
@@ -78,7 +78,7 @@ it('never draws the logo of a client metadata document', function (): void {
     $html = renderAuthorize(
         Request::create('/oauth/authorize'),
         ['logo_uri' => 'https://app.example.com/registered.png'],
-        clientMetadata(['logoUri' => 'https://app.example.com/logo.png']),
+        documentClientMetadata(['logoUri' => 'https://app.example.com/logo.png']),
     );
 
     expect($html)->not->toContain('<img')
@@ -89,7 +89,7 @@ it('never draws the logo of a client metadata document', function (): void {
 it('warns when the website of a client metadata document is on another origin', function (): void {
     $this->withoutVite();
 
-    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata([
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: documentClientMetadata([
         'clientUri' => 'https://other.example',
         'clientUriMatchesOrigin' => false,
     ]));
@@ -101,7 +101,7 @@ it('warns when the website of a client metadata document is on another origin', 
 it('escapes the website of a client metadata document', function (): void {
     $this->withoutVite();
 
-    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata([
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: documentClientMetadata([
         'clientUri' => 'https://x.test/<script>alert(1)</script>',
         'clientUriMatchesOrigin' => false,
     ]));
@@ -112,7 +112,7 @@ it('escapes the website of a client metadata document', function (): void {
 it('warns when approval sends the person to a program on this computer', function (): void {
     $this->withoutVite();
 
-    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: clientMetadata(['redirectIsLoopback' => true]));
+    $html = renderAuthorize(Request::create('/oauth/authorize'), clientMetadata: documentClientMetadata(['redirectIsLoopback' => true]));
 
     expect($html)->toContain('program running on this computer');
 });

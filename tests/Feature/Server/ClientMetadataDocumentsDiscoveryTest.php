@@ -7,7 +7,9 @@ use Laravel\Mcp\Server\Registrar;
 use Laravel\Passport\Passport;
 use Symfony\Component\Process\Process;
 
-/*
+/**
+ * Determine if the test of the given name ran in a child process.
+ *
  * The Passport stand-ins are loaded once per process, and Pest cannot isolate a test, so each
  * case runs this same test again in a child process, where it finds the Passport it needs. The
  * child runs with Xdebug off: a coverage run has loaded it in the parent, and the child needs none.
@@ -39,8 +41,10 @@ function discoverAuthorizationServer(): void
     (new Registrar)->oauthRoutes();
 }
 
-it('does not advertise documents when the installed passport has no such query', function (): void {
-    if (inChildProcess('does not advertise documents when the installed passport has no such query')) {
+$name = 'does not advertise documents when the installed passport has no such query';
+
+it($name, function () use ($name): void {
+    if (inChildProcess($name)) {
         return;
     }
 
@@ -53,8 +57,10 @@ it('does not advertise documents when the installed passport has no such query',
         ->assertJsonMissingPath('client_id_metadata_document_supported');
 });
 
-it('does not advertise documents when passport is not installed', function (): void {
-    if (inChildProcess('does not advertise documents when passport is not installed')) {
+$name = 'does not advertise documents when passport is not installed';
+
+it($name, function () use ($name): void {
+    if (inChildProcess($name)) {
         return;
     }
 

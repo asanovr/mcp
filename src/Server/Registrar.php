@@ -174,9 +174,6 @@ class Registrar
         ], fn (mixed $value): bool => $value !== null);
     }
 
-    /**
-     * Determine if Passport accepts Client ID Metadata Documents as client identifiers.
-     */
     protected static function supportsClientMetadataDocuments(): bool
     {
         if (class_exists(Passport::class) === false) {

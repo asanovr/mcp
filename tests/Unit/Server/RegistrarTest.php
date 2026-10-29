@@ -31,7 +31,7 @@ function ensureMockClientRepository(): void
 afterEach(function (): void {
     if (class_exists(Passport::class)) {
         Passport::useClientModel(Client::class);
-        Passport::$clientMetadataDocuments = false;
+        Passport::clientMetadataDocuments(false);
     }
 });
 
@@ -957,7 +957,7 @@ it('advertises client id metadata documents when passport accepts them', functio
 
     (new Registrar)->oauthRoutes();
 
-    Passport::$clientMetadataDocuments = true;
+    Passport::clientMetadataDocuments();
 
     $this->getJson('/.well-known/oauth-authorization-server')
         ->assertOk()
@@ -972,7 +972,7 @@ it('does not advertise client id metadata documents when passport does not accep
 
     (new Registrar)->oauthRoutes();
 
-    Passport::$clientMetadataDocuments = false;
+    Passport::clientMetadataDocuments(false);
 
     $this->getJson('/.well-known/oauth-authorization-server/mcp/weather')
         ->assertOk()
@@ -990,12 +990,12 @@ it('follows passport when client id metadata documents are switched between requ
     $this->getJson('/.well-known/oauth-authorization-server')
         ->assertJsonMissingPath('client_id_metadata_document_supported');
 
-    Passport::$clientMetadataDocuments = true;
+    Passport::clientMetadataDocuments();
 
     $this->getJson('/.well-known/oauth-authorization-server')
         ->assertJsonPath('client_id_metadata_document_supported', true);
 
-    Passport::$clientMetadataDocuments = false;
+    Passport::clientMetadataDocuments(false);
 
     $this->getJson('/.well-known/oauth-authorization-server')
         ->assertJsonMissingPath('client_id_metadata_document_supported');
