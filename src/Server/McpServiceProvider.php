@@ -36,6 +36,7 @@ class McpServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerMcpScope();
+        $this->registerClientMetadataDocumentPolicy();
         $this->registerGlobalMiddleware();
         $this->registerRoutes();
         $this->registerContainerCallbacks();
@@ -142,6 +143,13 @@ class McpServiceProvider extends ServiceProvider
     {
         $this->app->booted(function (): void {
             Registrar::ensureMcpScope();
+        });
+    }
+
+    protected function registerClientMetadataDocumentPolicy(): void
+    {
+        $this->app->booted(function (): void {
+            Registrar::ensureClientMetadataDocumentPolicy();
         });
     }
 }

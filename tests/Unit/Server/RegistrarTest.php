@@ -762,6 +762,19 @@ it('handles oauth registration with allowed domains', function (): void {
     ]);
 });
 
+it('refuses an upper-case scheme as not a valid URL, ahead of the redirect domains', function (): void {
+    prepareOauthRegistration();
+
+    config()->set('mcp.redirect_domains', ['https://allowed.example']);
+
+    $this->postJson('/oauth/register', [
+        'redirect_uris' => ['HTTPS://evil.example/cb'],
+    ])->assertBadRequest()->assertExactJson([
+        'error' => 'invalid_redirect_uri',
+        'error_description' => 'redirect_uris.0 is not a valid URL.',
+    ]);
+});
+
 it('allows localhost with dynamic port when localhost is in redirect_domains', function (string $uri): void {
     ensureMockClientRepository();
 

@@ -72,3 +72,31 @@ it($name, function () use ($name): void {
         ->assertOk()
         ->assertJsonMissingPath('client_id_metadata_document_supported');
 });
+
+$name = 'sets no document validator when the installed passport has no such hook';
+
+it($name, function () use ($name): void {
+    if (inChildProcess($name)) {
+        return;
+    }
+
+    require_once __DIR__.'/../../Fixtures/PassportPassportWithoutClientMetadata.php';
+
+    Registrar::ensureClientMetadataDocumentPolicy();
+
+    expect(property_exists(Passport::class, 'clientMetadataDocumentValidator'))->toBeFalse();
+});
+
+$name = 'sets no document validator when passport is not installed';
+
+it($name, function () use ($name): void {
+    if (inChildProcess($name)) {
+        return;
+    }
+
+    expect(class_exists(Passport::class, false))->toBeFalse();
+
+    Registrar::ensureClientMetadataDocumentPolicy();
+
+    expect(class_exists(Passport::class, false))->toBeFalse();
+});

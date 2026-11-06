@@ -20,6 +20,7 @@ use Laravel\Mcp\Server\Http\Controllers\OAuthRegisterController;
 use Laravel\Mcp\Server\Middleware\AddWwwAuthenticateHeader;
 use Laravel\Mcp\Server\Middleware\ReorderJsonAccept;
 use Laravel\Mcp\Server\Middleware\ValidateMcpHeaders;
+use Laravel\Mcp\Server\OAuth\RedirectUriPolicy;
 use Laravel\Mcp\Server\Transport\HttpTransport;
 use Laravel\Mcp\Server\Transport\StdioTransport;
 use Laravel\Passport\Passport;
@@ -27,6 +28,11 @@ use Laravel\Passport\Passport;
 class Registrar
 {
     use Macroable;
+
+    /**
+     * The validator this package last set on Passport, to recognize it when booting again.
+     */
+    protected static ?Closure $clientMetadataDocumentPolicy = null;
 
     public const OAUTH_SCOPE = 'mcp:use';
 
@@ -225,6 +231,53 @@ class Registrar
         }
 
         return $current;
+    }
+
+    /**
+     * Make Passport's client metadata documents obey "mcp.redirect_domains", as registrations do.
+     *
+     * Wraps the validator the application gave Passport, when the installed Passport has the hook. An
+     * application that sets Passport::validateClientMetadataDocumentsUsing() after boot calls this again.
+     */
+    public static function ensureClientMetadataDocumentPolicy(): void
+    {
+        if (class_exists(Passport::class) === false
+            || ! property_exists(Passport::class, 'clientMetadataDocumentValidator')
+            || ! is_callable([Passport::class, 'validateClientMetadataDocumentsUsing'])) {
+            return;
+        }
+
+        $previous = Passport::$clientMetadataDocumentValidator;
+
+        if (static::$clientMetadataDocumentPolicy instanceof Closure && $previous === static::$clientMetadataDocumentPolicy) {
+            return;
+        }
+
+        $wrapper = static function (array $document, string $url) use ($previous): ?string {
+            $policy = RedirectUriPolicy::fromConfig();
+
+            foreach ($document['redirect_uris'] ?? [] as $uri) {
+                if (! is_string($uri)) {
+                    continue;
+                }
+
+                if (! $policy->isValid($uri)) {
+                    return "The redirect URI [{$uri}] is not a valid URL.";
+                }
+
+                if (! $policy->isPermitted($uri)) {
+                    return "The redirect URI [{$uri}] is not a permitted redirect domain.";
+                }
+            }
+
+            $reason = $previous instanceof Closure ? $previous($document, $url) : null;
+
+            return is_string($reason) && $reason !== '' ? $reason : null;
+        };
+
+        static::$clientMetadataDocumentPolicy = $wrapper;
+
+        Passport::validateClientMetadataDocumentsUsing($wrapper);
     }
 
     protected function clientManager(): ClientManager
